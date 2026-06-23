@@ -1,0 +1,10 @@
+# secrets / local env (real KV tokens live in Vercel env vars, never in the repo)
+.env
+.env.local
+.env.*.local
+
+# vercel cli local state
+.vercel
+
+# os cruft
+.DS_Store

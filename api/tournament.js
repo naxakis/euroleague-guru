@@ -136,6 +136,12 @@ module.exports = async (req, res) => {
         return res.status(200).json({ ok: true, round: meta.round });
       }
 
+      if (b.action === 'drop') {
+        if (!b.name) return res.status(400).json({ error: 'name_required' });
+        await redis(['HDEL', key, pf(b.name)]); // remove membership; their orphan round rosters are ignored
+        return res.status(200).json({ ok: true });
+      }
+
       return res.status(400).json({ error: 'bad_action' });
     }
 

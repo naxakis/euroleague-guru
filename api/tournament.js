@@ -14,7 +14,8 @@
 //   POST {action:'create', id, maxPlayers, name}
 //   POST {action:'join',   id, name}        -> {ok} | {error:not_found|full|name_taken|locked}
 //   POST {action:'submit', id, name, roster}-> {ok, round}     (stores under the current round)
-//   POST {action:'next_round', id}          -> {ok, round}     (any member; locks membership)
+//   POST {action:'next_round', id, from}    -> {ok, round}     (any member; locks membership. `from` =
+//        the round the client saw; advances only if it still matches -> concurrent clicks can't skip a round)
 //   POST {action:'drop',  id, name}         -> {ok}            (also closes the vacated slot: maxPlayers=members)
 //   POST {action:'close', id}               -> {ok, maxPlayers}(start now: lock maxPlayers to current members)
 //
@@ -148,9 +149,14 @@ module.exports = async (req, res) => {
         const metaRaw = await redis(['HGET', key, 'meta']);
         if (!metaRaw) return res.status(200).json({ error: 'not_found' });
         const meta = JSON.parse(metaRaw);
-        meta.round = (meta.round || 1) + 1;
-        await redis(['HSET', key, 'meta', JSON.stringify(meta)]);
-        await redis(['EXPIRE', key, TTL_SECONDS]);
+        const cur = meta.round || 1;
+        // compare-and-swap: only advance from the round the client saw, so two players both
+        // clicking "Start Round N" (or a stale double-click) don't skip a round (1 -> 2 -> 3).
+        if (b.from == null || Number(b.from) === cur) {
+          meta.round = cur + 1;
+          await redis(['HSET', key, 'meta', JSON.stringify(meta)]);
+          await redis(['EXPIRE', key, TTL_SECONDS]);
+        }
         return res.status(200).json({ ok: true, round: meta.round });
       }
 

@@ -15,6 +15,8 @@
 //   POST {action:'join',   id, name}        -> {ok} | {error:not_found|full|name_taken|locked}
 //   POST {action:'submit', id, name, roster}-> {ok, round}     (stores under the current round)
 //   POST {action:'next_round', id}          -> {ok, round}     (any member; locks membership)
+//   POST {action:'drop',  id, name}         -> {ok}            (also closes the vacated slot: maxPlayers=members)
+//   POST {action:'close', id}               -> {ok, maxPlayers}(start now: lock maxPlayers to current members)
 //
 // "Challenge the World" all-time ladder lives in ONE global hash `world:all`:
 //   field "<name>" -> {name, roster, submittedAt}   (one entry per name; resubmit replaces)
@@ -155,7 +157,31 @@ module.exports = async (req, res) => {
       if (b.action === 'drop') {
         if (!b.name) return res.status(400).json({ error: 'name_required' });
         await redis(['HDEL', key, pf(b.name)]); // remove membership; their orphan round rosters are ignored
+        const metaRaw = await redis(['HGET', key, 'meta']);
+        if (metaRaw) {
+          const meta = JSON.parse(metaRaw);
+          const fields = (await redis(['HKEYS', key])) || [];
+          const cur = fields.filter((f) => f.startsWith('p:')).length;
+          if (cur >= 2 && cur < (meta.maxPlayers || 0)) { // close the vacated slot
+            meta.maxPlayers = cur;
+            await redis(['HSET', key, 'meta', JSON.stringify(meta)]);
+          }
+        }
         return res.status(200).json({ ok: true });
+      }
+
+      if (b.action === 'close') { // "start with current players": lock the size to whoever's in
+        const metaRaw = await redis(['HGET', key, 'meta']);
+        if (!metaRaw) return res.status(200).json({ error: 'not_found' });
+        const meta = JSON.parse(metaRaw);
+        const fields = (await redis(['HKEYS', key])) || [];
+        const cur = fields.filter((f) => f.startsWith('p:')).length;
+        if (cur >= 2) {
+          meta.maxPlayers = cur;
+          await redis(['HSET', key, 'meta', JSON.stringify(meta)]);
+          await redis(['EXPIRE', key, TTL_SECONDS]);
+        }
+        return res.status(200).json({ ok: true, maxPlayers: meta.maxPlayers });
       }
 
       return res.status(400).json({ error: 'bad_action' });

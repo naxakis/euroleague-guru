@@ -21,6 +21,7 @@
 - **Διόρθωση πρωταθλήματος (Friends):** ένας γύρος ολοκληρώνεται και βγάζει νικητή **μόνο όταν έχουν μπει ΚΑΙ υποβάλει όλοι** οι παίκτες (πριν, ένα παιχνίδι 4 ατόμων «κλείδωνε» νικητή με 2). Αν δεν εμφανιστούν όλοι, στη βαθμολογία μπορείς να **«ξεκινήσεις με όσους είναι»** ή να διώξεις όποιον λείπει.
 - **Διόρθωση link (σημαντικό):** το «Copy link / Share tournament link» χρησιμοποιεί πλέον το **τρέχον domain** — ταιριάζει αυτόματα σε όποιο domain τρέχει το παιχνίδι (custom domain, vercel.app ή localhost).
 - **Social preview:** όταν μοιράζεις το link (WhatsApp/Telegram/Viber/Facebook/X), εμφανίζεται πλέον **εικόνα + τίτλος + περιγραφή** (Open Graph/Twitter card), μαζί με **favicon** και εικονίδιο για «Add to Home Screen».
+- **Disclaimer** στο υποσέλιδο: «Unofficial fan project — not affiliated with or endorsed by Euroleague Basketball».
 
 ### ✨ v18 — νέα
 - **Ranking κατά PIR** ξανά (όχι κατά συμμετοχές) στη λίστα παικτών.

@@ -231,6 +231,17 @@ module.exports = async (req, res) => {
         await redis(['DEL', 'world:all']);
         return res.status(200).json({ ok: true });
       }
+      if (b.action === 'champion_rename') { // admin: rename a crowned monthly champion
+        if (!ADMIN_KEY || b.key !== ADMIN_KEY) return res.status(403).json({ error: 'forbidden' });
+        const name = String(b.name || '').trim().slice(0, 40);
+        if (!b.month || !name) return res.status(400).json({ error: 'month_and_name_required' });
+        const raw = await redis(['HGET', 'world:champions', b.month]);
+        if (!raw) return res.status(404).json({ error: 'no_champion' });
+        let c; try { c = JSON.parse(raw); } catch (e) { return res.status(500).json({ error: 'bad_record' }); }
+        c.name = name;
+        await redis(['HSET', 'world:champions', b.month, JSON.stringify(c)]);
+        return res.status(200).json({ ok: true });
+      }
 
       if (b.action === 'stats') { // admin: engagement metrics (all-time counters + current snapshot)
         if (!ADMIN_KEY || b.key !== ADMIN_KEY) return res.status(403).json({ error: 'forbidden' });

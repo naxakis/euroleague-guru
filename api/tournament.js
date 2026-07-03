@@ -103,6 +103,11 @@ async function worldEntries() {
   if (flat) for (let i = 0; i < flat.length; i += 2) { try { out.push(JSON.parse(flat[i + 1])); } catch (e) {} }
   return out;
 }
+async function advEntries() { // advanced (per-season) ladder, separate all-time namespace
+  const flat = await redis(['HGETALL', 'advworld:all']); const out = [];
+  if (flat) for (let i = 0; i < flat.length; i += 2) { try { out.push(JSON.parse(flat[i + 1])); } catch (e) {} }
+  return out;
+}
 async function crownIfNew(month) { // record the winner of `month` from the current board (HSETNX -> once)
   const entries = await worldEntries();
   if (entries.length < 2) return null;
@@ -156,6 +161,9 @@ module.exports = async (req, res) => {
         if (cflat) for (let i = 0; i < cflat.length; i += 2) { try { champions.push(JSON.parse(cflat[i + 1])); } catch (e) {} }
         champions.sort((a, b) => String(b.month).localeCompare(String(a.month)));
         return res.status(200).json({ entries, month, champions });
+      }
+      if (req.query.advworld) { // advanced (per-season) ladder — all-time, own namespace
+        return res.status(200).json({ entries: await advEntries() });
       }
       if (req.query.leagues) { // public league directory (browse)
         const flat = await redis(['HGETALL', 'leagues:pub']);
@@ -213,6 +221,23 @@ module.exports = async (req, res) => {
         await redis(['INCR', 'stats:squads']);
         return res.status(200).json({ ok: true });
       }
+      if (b.action === 'advworld_submit') { // advanced (per-season) ladder — all-time, no monthly reset
+        if (!b.name) return res.status(400).json({ error: 'name_required' });
+        await redis(['HSET', 'advworld:all', b.name, JSON.stringify({ name: b.name, roster: b.roster, submittedAt: Date.now() })]);
+        await redis(['INCR', 'stats:adv_squads']);
+        return res.status(200).json({ ok: true });
+      }
+      if (b.action === 'advworld_delete') { // admin: remove one advanced squad
+        if (!ADMIN_KEY || b.key !== ADMIN_KEY) return res.status(403).json({ error: 'forbidden' });
+        if (!b.name) return res.status(400).json({ error: 'name_required' });
+        await redis(['HDEL', 'advworld:all', b.name]);
+        return res.status(200).json({ ok: true });
+      }
+      if (b.action === 'advworld_reset') { // admin: clear the advanced ladder
+        if (!ADMIN_KEY || b.key !== ADMIN_KEY) return res.status(403).json({ error: 'forbidden' });
+        await redis(['DEL', 'advworld:all']);
+        return res.status(200).json({ ok: true });
+      }
       if (b.action === 'world_endmonth') { // admin: crown the current leader now + start a fresh month
         if (!ADMIN_KEY || b.key !== ADMIN_KEY) return res.status(403).json({ error: 'forbidden' });
         const cur = (await redis(['HGET', 'world:meta', 'm'])) || monthKey();
@@ -255,6 +280,7 @@ module.exports = async (req, res) => {
         if (cflat) for (let i = 1; i < cflat.length; i += 2) { try { publicTeams += JSON.parse(cflat[i]).teams || 0; } catch (e) {} }
         const now = {
           ladderSquads: await hlen('world:all'), champions: await hlen('world:champions'),
+          advLadder: await hlen('advworld:all'),
           publicLeagues: await hlen('leagues:pub'), publicTeams, feedback: await hlen('feedback:all'),
         };
         return res.status(200).json({ allTime, now });

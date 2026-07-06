@@ -217,13 +217,16 @@ module.exports = async (req, res) => {
       if (b.action === 'world_submit') {
         if (!b.name) return res.status(400).json({ error: 'name_required' });
         await worldRollover(); // start a fresh month if the calendar month changed
-        await redis(['HSET', 'world:all', b.name, JSON.stringify({ name: b.name, roster: b.roster, submittedAt: Date.now() })]);
+        // names are unique — HSETNX creates only if the name isn't already taken (no overwrite)
+        const created = await redis(['HSETNX', 'world:all', b.name, JSON.stringify({ name: b.name, roster: b.roster, submittedAt: Date.now() })]);
+        if (!created) return res.status(200).json({ error: 'name_taken' });
         await redis(['INCR', 'stats:squads']);
         return res.status(200).json({ ok: true });
       }
       if (b.action === 'advworld_submit') { // advanced (per-season) ladder — all-time, no monthly reset
         if (!b.name) return res.status(400).json({ error: 'name_required' });
-        await redis(['HSET', 'advworld:all', b.name, JSON.stringify({ name: b.name, roster: b.roster, submittedAt: Date.now() })]);
+        const created = await redis(['HSETNX', 'advworld:all', b.name, JSON.stringify({ name: b.name, roster: b.roster, submittedAt: Date.now() })]);
+        if (!created) return res.status(200).json({ error: 'name_taken' });
         await redis(['INCR', 'stats:adv_squads']);
         return res.status(200).json({ ok: true });
       }

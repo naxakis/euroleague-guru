@@ -97,10 +97,11 @@ h1,h2,.bebas{font-family:'Bebas Neue',sans-serif;letter-spacing:1px;}
 
   <div class="card" id="scr-map">
     <h2 style="color:var(--gold);font-size:26px;" id="mon-label">BEAT THE GURU</h2>
+    <div id="name-chip" onclick="askName(true)" style="cursor:pointer;font-family:'Space Mono',monospace;font-size:11px;color:var(--purple2);margin-top:2px;">PLAYING AS: — ✎</div>
     <div class="theme-sub" style="margin-bottom:12px">Beat the Guru in each challenge to unlock the next. Every loss counts — forever.</div>
     <div class="gmap" id="gmap"></div>
-    <div id="map-pantheon"></div>
-    <div style="margin-top:14px"><button class="btn ghost" onclick="resetAll()">RESET LOCAL PROGRESS</button></div>
+    <div style="margin-top:14px;text-align:center;"><button class="btn ghost" onclick="showPantheon()">🏆 JULY GURUS — VIEW STANDINGS</button></div>
+    <div style="margin-top:14px" id="dev-tools" class="hidden"><button class="btn ghost" onclick="resetAll()">RESET LOCAL PROGRESS (dev)</button></div>
   </div>
 
   <div class="card hidden" id="scr-intro">
@@ -150,6 +151,7 @@ h1,h2,.bebas{font-family:'Bebas Neue',sans-serif;letter-spacing:1px;}
   <div class="card hidden pantheon" id="scr-pantheon">
     <div class="big" id="pan-title">JULY GURU 🧙</div>
     <div class="theme-sub" id="pan-sub"></div>
+    <div id="pan-standings" style="margin-top:16px;max-width:460px;margin-left:auto;margin-right:auto;"></div>
     <div class="share" id="pan-share" style="margin-top:16px"></div>
     <div style="margin-top:16px"><button class="btn ghost" onclick="showMap()">BACK TO MAP</button></div>
   </div>
@@ -157,7 +159,7 @@ h1,h2,.bebas{font-family:'Bebas Neue',sans-serif;letter-spacing:1px;}
 <div class="toast" id="toast"></div>
 
 <script>
-const DB = (window.parent && window.parent !== window && window.parent.DB) ? window.parent.DB : null;
+const DB = (function(){try{return (window.parent && window.parent !== window && window.parent.DB) || null;}catch(e){return null;}})();
 let CHAMPS = new Set(), NAT = {}, GURUS = null, MONTH = '', LABEL = '';
 const ERAS = DB ? Object.keys(DB) : [];
 const GEXCLUDE = {
@@ -170,6 +172,7 @@ function nrm(s){return s.normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowe
 function isChamp(n){return CHAMPS.has(nrm(n));}
 function natOf(n){return NAT[nrm(n)]||'INT';}
 function rnd(a){return a[Math.floor(Math.random()*a.length)];}
+const DEV=/[?&]dev=1/.test(location.search);
 const STD_SLOTS=['G','G','F','F','C','ANY'];
 /* Tuning δυσκολίας Guru */
 
@@ -211,19 +214,35 @@ function setS(s){localStorage.setItem(skey(),JSON.stringify(s));paintLosses();sy
 function addLoss(){const s=S();s.losses++;s.strikesTotal=(s.strikesTotal||0)+G.strikes;setS(s);}
 function token(){try{if(window.parent&&window.parent.guruToken)return window.parent.guruToken();}catch(e){}
   try{var t=localStorage.getItem('guru-token');if(!t){t='tk'+Date.now().toString(36)+Math.random().toString(36).slice(2,8);localStorage.setItem('guru-token',t);}return t;}catch(e){return 'tk-anon';}}
-function uname(){try{return localStorage.getItem('guru-username')||'Anonymous';}catch(e){return 'Anonymous';}}
+function uname(){try{return localStorage.getItem('guru-username')||'';}catch(e){return '';}}
+function askName(force){
+  let cur=uname();
+  if(cur&&!force)return cur;
+  const n=(window.prompt('Your name for the '+(LABEL||'monthly')+' ladder:',cur||'')||'').trim().slice(0,24);
+  if(n){try{localStorage.setItem('guru-username',n);}catch(e){} sync(S()); paintName();}
+  return n||cur;
+}
+function paintName(){const el=document.getElementById('name-chip');if(el)el.textContent='PLAYING AS: '+(uname()||'Anonymous')+' ✎';}
 let syncT=null;
 function sync(s){clearTimeout(syncT);syncT=setTimeout(()=>{
   fetch('/api/btg',{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({action:'sync',token:token(),name:uname(),won:s.won,losses:s.losses,strikes:s.strikesTotal||0})
+    body:JSON.stringify({action:'sync',token:token(),name:uname()||'Anonymous',won:s.won,losses:s.losses,strikes:s.strikesTotal||0})
   }).catch(()=>{});},400);}
 function loadPantheon(){
   fetch('/api/btg?token='+encodeURIComponent(token())).then(r=>r.json()).then(d=>{
     if(!d||!d.pantheon)return;
     const el=document.getElementById('map-pantheon');if(!el)return;
-    el.innerHTML=d.pantheon.length?'<div class="bebas" style="color:var(--gold);font-size:18px;margin:14px 0 6px">'+LABEL+' GURUS ('+d.players+' playing)</div>'+
+    const s=S();
+    let mine='';
+    if(d.me){
+      const done=d.me.won.filter(Boolean).length;
+      let rank='';
+      if(done===5){const better=d.pantheon.filter(e=>e.losses<d.me.losses||(e.losses===d.me.losses&&e.strikes<d.me.strikes)).length;rank=' · rank #'+(better+1);}
+      mine='<div style="font-family:Space Mono,monospace;font-size:12px;color:var(--gold);margin:10px 0 2px;">YOU ('+(d.me.name||'Anonymous')+'): '+done+'/5 cleared · '+d.me.losses+'L · '+d.me.strikes+' strikes'+rank+'</div>';
+    }
+    el.innerHTML=mine+(d.pantheon.length?'<div class="bebas" style="color:var(--gold);font-size:18px;margin:10px 0 6px">'+LABEL+' GURUS ('+d.players+' playing)</div>'+
       d.pantheon.slice(0,20).map((e,i)=>'<div style="font-family:Space Mono,monospace;font-size:12px;color:var(--muted)">'+(i+1)+'. <b style="color:var(--text)">'+e.name+'</b> — '+e.losses+'L · '+e.strikes+' strikes'+(e.tier==='FLAWLESS'?' ✨':'')+'</div>').join('')
-      :'<div style="font-size:12px;color:var(--muted);margin-top:12px">No '+LABEL+' Gurus yet — be the first! 🏆</div>';
+      :'<div style="font-size:12px;color:var(--muted);margin-top:12px">No '+LABEL+' Gurus yet — be the first! 🏆</div>');
   }).catch(()=>{});
 }
 function paintLosses(){document.getElementById('losses').textContent=S().losses;}
@@ -276,18 +295,49 @@ function showMap(){
       <div class="st">${done?'✅':(locked?'🔒':'▶️')}</div></div>`;
   }).join('');
   document.getElementById('att').textContent='';
-  show('scr-map');loadPantheon();
-  if(s.won.every(Boolean))showPantheon();
+  show('scr-map');
+}
+function finishFlow(){
+  const n=(window.prompt('🧙 YOU ARE A '+(LABEL||'').toUpperCase()+' GURU!\nEnter your name for the standings:', uname()||'')||'').trim().slice(0,24);
+  if(n){try{localStorage.setItem('guru-username',n);}catch(e){}paintName();}
+  sync(S());
+  setTimeout(showPantheon,450); // δώσε στο sync μια ανάσα να προλάβει το ladder
 }
 function showPantheon(){
   const s=S();
-  document.getElementById('pan-title').textContent=s.losses===0?('FLAWLESS '+LABEL.toUpperCase()+' GURU 🧙✨'):(LABEL.toUpperCase()+' GURU 🧙');
-  document.getElementById('pan-sub').textContent='All five challenges cleared with '+s.losses+' loss'+(s.losses===1?'':'es')+'.';
-  document.getElementById('pan-share').textContent='GuruLeague · Beat The Guru — '+LABEL.toUpperCase()+' GURU '+(s.losses===0?'✨ FLAWLESS':'')+' — 5/5 · '+s.losses+'L';
+  const done=s.won.every(Boolean);
+  document.getElementById('pan-title').textContent=done?(s.losses===0?('FLAWLESS '+LABEL.toUpperCase()+' GURU 🧙✨'):(LABEL.toUpperCase()+' GURU 🧙')):(LABEL.toUpperCase()+' GURUS 🏆');
+  document.getElementById('pan-sub').textContent=done?('All five challenges cleared with '+s.losses+' loss'+(s.losses===1?'':'es')+'.'):'The wall of fame — clear all 5 challenges to enter.';
+  document.getElementById('pan-share').textContent=done?('GuruLeague · Beat The Guru — '+LABEL.toUpperCase()+' GURU '+(s.losses===0?'✨ FLAWLESS':'')+' — 5/5 · '+s.losses+'L'):'';
+  document.getElementById('pan-share').style.display=done?'block':'none';
+  const box=document.getElementById('pan-standings');
+  box.innerHTML='<div style="color:var(--muted);font-size:13px;">Loading standings…</div>';
   show('scr-pantheon');
+  fetch('/api/btg?token='+encodeURIComponent(token())).then(r=>r.json()).then(d=>{
+    if(!d||!d.pantheon){box.innerHTML='';return;}
+    const meName=(d.me&&d.me.name)||uname();
+    if(d.me&&d.me.won&&d.me.won.every(Boolean)){
+      document.getElementById('pan-title').textContent=d.me.losses===0?('FLAWLESS '+LABEL.toUpperCase()+' GURU 🧙✨'):(LABEL.toUpperCase()+' GURU 🧙');
+      document.getElementById('pan-sub').textContent='All five challenges cleared with '+d.me.losses+' loss'+(d.me.losses===1?'':'es')+'.';
+    }
+    if(!d.pantheon.length){box.innerHTML='<div style="color:var(--muted);font-size:13px;">No '+LABEL+' Gurus yet — be the first! 🏆</div>';return;}
+    let html='<div style="font-family:\'Bebas Neue\',sans-serif;letter-spacing:1px;color:var(--muted);font-size:13px;display:flex;padding:0 10px 6px;"><span style="width:34px;">#</span><span style="flex:1;text-align:left;">GURU</span><span style="width:56px;">LOSSES</span><span style="width:60px;">STRIKES</span></div>';
+    d.pantheon.forEach((e,i)=>{
+      const me=meName&&e.name===meName;
+      const medal=i===0?'👑':(i===1?'🥈':(i===2?'🥉':'#'+(i+1)));
+      html+='<div style="display:flex;align-items:center;padding:9px 10px;border-radius:10px;margin-bottom:5px;'+
+        (me?'background:rgba(245,197,24,.12);border:1px solid var(--gold);':'background:var(--surface2);border:1px solid var(--border);')+'">'+
+        '<span style="width:34px;font-size:'+(i<3?'16px':'12px')+';font-family:\'Space Mono\',monospace;color:var(--muted);">'+medal+'</span>'+
+        '<span style="flex:1;text-align:left;font-weight:600;font-size:14px;">'+e.name+(e.tier==='FLAWLESS'?' ✨':'')+(me?' <span style="color:var(--gold);font-size:11px;">(you)</span>':'')+'</span>'+
+        '<span style="width:56px;font-family:\'Space Mono\',monospace;color:var(--red);font-weight:700;">'+e.losses+'L</span>'+
+        '<span style="width:60px;font-family:\'Space Mono\',monospace;color:var(--muted);font-size:12px;">'+e.strikes+'</span></div>';
+    });
+    html+='<div style="color:var(--muted);font-size:11px;margin-top:8px;">'+d.players+' playing this month · ranked by fewest losses, then strikes</div>';
+    box.innerHTML=html;
+  }).catch(()=>{box.innerHTML='<div style="color:var(--muted);font-size:13px;">Standings unavailable offline.</div>';});
 }
 function openIntro(i){
-  CUR=i;const c=CH[i];
+  CUR=i;const c=CH[i];try{window.parent.postMessage({btg:'enterChallenge'},'*');}catch(e){}
   document.getElementById('in-title').textContent=c.name;
   document.getElementById('in-sub').textContent='Challenge '+(i+1)+' of 5 — '+c.short;
   document.getElementById('in-rules').innerHTML=c.rules;
@@ -431,17 +481,27 @@ function vsGuru(){
   document.getElementById('vs').classList.remove('hidden');
   document.getElementById('btn-retry').classList.toggle('hidden',win);
   document.getElementById('btn-next').classList.toggle('hidden',!win);
-  if(win){const s=S();s.won[CUR]=true;setS(s);}else addLoss();
+  if(win){const s=S();s.won[CUR]=true;setS(s);
+    if(s.won.every(Boolean)){document.getElementById('btn-next').setAttribute('onclick','finishFlow()');}
+  }else addLoss();
   const s=S();
   document.getElementById('share').classList.remove('hidden');
   document.getElementById('share').textContent='GuruLeague · Beat The Guru — '+c.name+' — '+(win?'Beat the Guru ✔':'Lost ✘')+(c.strikes?' — strikes: '+G.strikes:'')+' — total losses: '+s.losses;
 }
+
+/* Back-button γέφυρα με το parent site */
+window.addEventListener('message',function(ev){
+  if(!ev.data||ev.data.btg!=='back')return;
+  var onMap=document.getElementById('scr-map')&&!document.getElementById('scr-map').classList.contains('hidden');
+  if(!onMap){showMap();}
+  else{try{window.parent.postMessage({btg:'exit'},'*');}catch(e){}}
+});
 (function boot(){
-  if(!DB){document.getElementById('scr-map').innerHTML='<div class="theme-sub">Could not reach the game database — open Beat The Guru from the main site.</div>';return;}
+  if(!DB){document.getElementById('scr-map').innerHTML='<div class="theme-sub" style="font-size:15px">⚠️ Beat The Guru needs the main site to run (it reads the game database from it).<br><br>If you opened this file directly from your computer (file://), that is expected — browsers isolate local files.<br>Test it on the site / Vercel preview, or use <b>btg_local_test.html</b> for double-click testing.</div>';return;}
   fetch('btg_data.json').then(r=>r.json()).then(d=>{
     CHAMPS=new Set(d.champs);NAT=d.nat;GURUS=d.gurus;MONTH=d.month;LABEL=d.label||d.month;
     document.getElementById('mon-label').textContent=LABEL.toUpperCase()+' · 5 CHALLENGES';
-    paintLosses();showMap();
+    paintLosses();paintName();if(DEV)document.getElementById('dev-tools').classList.remove('hidden');showMap();
   }).catch(()=>{document.getElementById('scr-map').innerHTML='<div class="theme-sub">Failed to load challenge data (btg_data.json). Try refreshing.</div>';});
 })();
 </script>

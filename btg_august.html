@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GuruLeague — Beat The Guru</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{--gold:#F5C518;--gold2:#FFD84D;--purple:#6B21E8;--purple2:#9B59F5;--bg:#0E0718;--surface:#160C2E;--surface2:#1F1040;--border:#3A1F7A;--text:#F0ECF8;--muted:#8B7BAD;--green:#22C55E;--red:#EF4444;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:Inter,sans-serif;min-height:100vh;}
+.wrap{max-width:780px;margin:0 auto;padding:20px 14px 60px;}
+h1,h2,.bebas{font-family:'Bebas Neue',sans-serif;letter-spacing:1px;}
+.demo-tag{display:inline-block;background:var(--purple);color:#fff;font-size:11px;font-weight:700;padding:2px 8px;border-radius:4px;vertical-align:middle;margin-left:8px;}
+.top{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+.top h1{font-size:32px;color:var(--gold);}
+.losses{font-family:'Space Mono',monospace;font-size:13px;color:var(--muted);}
+.losses b{color:var(--red);font-size:16px;}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px;margin-bottom:14px;}
+.theme-title{font-size:38px;color:var(--gold);line-height:1;}
+.theme-sub{color:var(--muted);margin-top:6px;font-size:14px;line-height:1.5;}
+#in-sub{font-size:17px;color:var(--text);}
+.rules{margin-top:12px;font-size:13px;line-height:1.7;}
+.rules span{color:var(--gold);}
+.btn{display:inline-block;background:var(--gold);color:#1a1205;font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:1px;border:none;border-radius:10px;padding:10px 26px;cursor:pointer;transition:transform .12s;}
+.btn:hover{transform:translateY(-2px);}
+.btn.ghost{background:transparent;color:var(--gold);border:1px solid var(--border);}
+/* gauntlet map */
+.gmap{display:flex;flex-direction:column;gap:10px;}
+.gcard{display:flex;align-items:center;gap:14px;background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px;cursor:pointer;transition:border-color .15s;}
+.gcard:hover{border-color:var(--gold);}
+.gcard.locked{opacity:.45;cursor:not-allowed;}
+.gcard.done{border-color:var(--green);}
+.gcard .num{font-family:'Bebas Neue',sans-serif;font-size:30px;color:var(--muted);width:34px;text-align:center;}
+.gcard.done .num{color:var(--green);}
+.gcard .ttl{font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--gold);}
+.gcard .sub{font-size:12px;color:var(--muted);}
+.gcard .st{margin-left:auto;font-size:20px;}
+.slots{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin:14px 0;}
+.slot{background:var(--surface2);border:1px solid var(--border);border-radius:10px;min-height:74px;padding:7px 5px;text-align:center;font-size:11px;}
+.slot .pos{font-family:'Bebas Neue',sans-serif;font-size:16px;color:var(--muted);}
+.slot.filled .pos{color:var(--gold);}
+.slot .nm{margin-top:4px;font-weight:600;font-size:11px;line-height:1.2;}
+.slot.active{border-color:var(--gold);box-shadow:0 0 14px rgba(245,197,24,.25);}
+.spinrow{display:flex;gap:10px;margin:12px 0;}
+.spin-slot{flex:1;background:var(--surface2);border:2px solid var(--border);border-radius:10px;padding:14px 8px;text-align:center;min-height:84px;display:flex;flex-direction:column;justify-content:center;transition:border-color .3s,box-shadow .3s;}
+.spin-slot .lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;}
+.spin-slot .val{font-family:'Bebas Neue',sans-serif;font-size:24px;margin-top:4px;}
+.spinning{color:var(--gold);animation:flicker .07s infinite;}
+@keyframes flicker{0%,100%{opacity:1}50%{opacity:.3}}
+.locked{border-color:var(--gold);box-shadow:0 0 20px rgba(245,197,24,.25);}
+@keyframes slotLock{0%{transform:scale(1)}35%{transform:scale(1.06)}65%{transform:scale(.98)}100%{transform:scale(1)}}
+.slot-lock{animation:slotLock .46s cubic-bezier(.2,.9,.3,1.4);}
+.strikes{display:flex;gap:6px;align-items:center;font-size:13px;color:var(--muted);margin:6px 0 10px;}
+.strike-dot{width:14px;height:14px;border-radius:50%;border:1px solid var(--border);}
+.strike-dot.hit{background:var(--red);border-color:var(--red);animation:slotLock .4s;}
+.pool{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;}
+.pcard{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px;cursor:pointer;transition:border-color .15s,transform .12s;position:relative;}
+.pcard:hover{border-color:var(--gold);transform:translateY(-2px);}
+.pcard .nm{font-weight:600;font-size:13px;line-height:1.25;}
+.pcard .meta{font-size:11px;color:var(--muted);margin-top:3px;}
+.pcard.mine{background:#2a0f14;border-color:var(--red);cursor:not-allowed;opacity:.65;}
+.pcard.mine::after{content:attr(data-mine);position:absolute;top:8px;right:8px;font-size:10px;color:var(--red);font-weight:700;}
+.pcard.taken{opacity:.35;cursor:not-allowed;}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+.shake{animation:shake .3s;}
+.toast{position:fixed;left:50%;top:18px;transform:translateX(-50%);background:var(--red);color:#fff;padding:10px 20px;border-radius:10px;font-weight:700;z-index:99;display:none;}
+.hiddenlab{font-size:11px;color:var(--muted);text-align:right;margin-bottom:6px;}
+.rvgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:12px 0;}
+.flip{perspective:700px;height:130px;}
+.flip .inner{position:relative;width:100%;height:100%;transform-style:preserve-3d;transition:transform .6s;}
+.flip.on .inner{transform:rotateY(180deg);}
+.face{position:absolute;inset:0;backface-visibility:hidden;border-radius:10px;border:1px solid var(--border);padding:9px;background:var(--surface2);}
+.face.back{transform:rotateY(180deg);border-color:var(--gold);}
+.face .nm{font-weight:600;font-size:12px;}
+.face .st{font-family:'Space Mono',monospace;font-size:10.5px;color:var(--gold2);margin-top:5px;line-height:1.5;}
+.cats{width:100%;border-collapse:collapse;margin:12px 0;font-family:'Space Mono',monospace;font-size:13px;}
+.cats td{padding:7px 6px;border-bottom:1px solid var(--border);text-align:center;}
+.cats .catw{color:var(--green);font-weight:700;}
+.cats .catl{color:var(--muted);}
+.result{font-family:'Bebas Neue',sans-serif;font-size:48px;text-align:center;margin:10px 0;}
+.result.win{color:var(--green);}.result.lose{color:var(--red);}
+.share{background:var(--surface2);border:1px dashed var(--border);border-radius:10px;padding:12px;font-family:'Space Mono',monospace;font-size:13px;margin-top:10px;}
+.hidden{display:none;}
+.guru-tag{color:var(--purple2);font-weight:700;}
+.pantheon{text-align:center;padding:30px 10px;}
+.pantheon .big{font-family:'Bebas Neue',sans-serif;font-size:56px;color:var(--gold);}
+@media(max-width:560px){.slots{grid-template-columns:repeat(3,1fr);}.rvgrid{grid-template-columns:repeat(2,1fr);}.theme-title{font-size:30px;}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <h1 onclick="showMap()" style="cursor:pointer">BEAT THE GURU</h1>
+    <div class="losses"><span id="att" style="margin-right:12px;color:var(--purple2)"></span>LOSSES: <b id="losses">0</b></div>
+  </div>
+
+  <div class="card" id="scr-map">
+    <h2 style="color:var(--gold);font-size:26px;" id="mon-label">BEAT THE GURU</h2>
+    <div id="name-chip" onclick="askName(true)" style="cursor:pointer;font-family:'Space Mono',monospace;font-size:11px;color:var(--purple2);margin-top:2px;">PLAYING AS: — ✎</div>
+    <div class="theme-sub" style="margin-bottom:12px">Beat the Guru in each challenge to unlock the next. Every loss counts — forever.</div>
+    <div class="gmap" id="gmap"></div>
+    <div style="margin-top:14px;text-align:center;"><button class="btn ghost" onclick="showPantheon()">🏆 JULY GURUS — VIEW STANDINGS</button></div>
+    <div style="margin-top:14px" id="dev-tools" class="hidden"><button class="btn ghost" onclick="resetAll()">RESET LOCAL PROGRESS (dev)</button></div>
+  </div>
+
+  <div class="card hidden" id="scr-intro">
+    <div class="theme-title" id="in-title"></div>
+    <div class="theme-sub" id="in-sub"></div>
+    <div class="rules" id="in-rules"></div>
+    <div style="margin-top:16px">
+      <button class="btn" onclick="startAttempt()">START</button>
+      <button class="btn ghost" onclick="showMap()">BACK</button>
+    </div>
+  </div>
+
+  <div class="card hidden" id="scr-draft">
+    <div class="bebas" id="dr-title" style="color:var(--gold);font-size:20px;margin-bottom:4px;"></div>
+    <div class="slots" id="slots"></div>
+    <div class="strikes" id="strikebox">STRIKES: <span class="strike-dot" id="sd0"></span><span class="strike-dot" id="sd1"></span></div>
+    <div class="spinrow">
+      <div class="spin-slot" id="slot-era"><div class="lbl">Era</div><div class="val" id="val-era">—</div></div>
+      <div class="spin-slot" id="slot-team"><div class="lbl">Team</div><div class="val" id="val-team">—</div></div>
+    </div>
+    <div class="hiddenlab">🙈 hidden stats mode</div>
+    <div class="pool" id="pool"></div>
+  </div>
+
+  <div class="card hidden" id="scr-reveal">
+    <h2 style="color:var(--gold);font-size:28px;">THE REVEAL</h2>
+    <div class="rvgrid" id="rvgrid"></div>
+    <div id="vs" class="hidden">
+      <h2 style="font-size:24px;">YOU vs <span class="guru-tag">THE GURU 🧙</span></h2>
+      <table class="cats" id="cats"></table>
+      <div class="result" id="result"></div>
+      <div class="share hidden" id="share"></div>
+      <div style="margin-top:14px;text-align:center;">
+        <button class="btn hidden" id="btn-retry" onclick="startAttempt()">RETRY — NEW SPINS</button>
+        <button class="btn hidden" id="btn-next" onclick="showMap()">CONTINUE ➜</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card hidden" id="scr-bust" style="text-align:center;border-color:var(--red);">
+    <div class="result lose">BUST! 💥</div>
+    <div class="theme-sub" id="bust-sub"></div>
+    <div style="margin-top:16px"><button class="btn" onclick="startAttempt()">RETRY — NEW SPINS</button>
+    <button class="btn ghost" onclick="showMap()">MAP</button></div>
+  </div>
+
+  <div class="card hidden pantheon" id="scr-pantheon">
+    <div class="big" id="pan-title">JULY GURU 🧙</div>
+    <div class="theme-sub" id="pan-sub"></div>
+    <div id="pan-standings" style="margin-top:16px;max-width:460px;margin-left:auto;margin-right:auto;"></div>
+    <div class="share" id="pan-share" style="margin-top:16px"></div>
+    <div style="margin-top:16px"><button class="btn ghost" onclick="showMap()">BACK TO MAP</button></div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const DB = (function(){try{return (window.parent && window.parent !== window && window.parent.DB) || null;}catch(e){return null;}})();
+
+const HISTPOOL={"Olympiacos":{"G":[{"name":"Vassilis Spanoulis","gp":282,"pos":"PG/SG"},{"name":"Vangelis Mantzaris","gp":210,"pos":"PG/SG"},{"name":"Kostas Sloukas","gp":209,"pos":"PG/SG"},{"name":"Thomas Walkup","gp":181,"pos":"PG"},{"name":"Giannoulis Larentzakis","gp":157,"pos":"SG"},{"name":"Tyler Dorsey","gp":101,"pos":"SG"},{"name":"Nigel Williams-Goss","gp":97,"pos":"PG"},{"name":"Matt Lojeski","gp":93,"pos":"SG/SF"},{"name":"Milos Teodosic","gp":80,"pos":"PG/SG"},{"name":"Isaiah Canaan","gp":80,"pos":"SG"}],"F":[{"name":"Kostas Papanikolaou","gp":398,"pos":"SF"},{"name":"Giorgos Printezis","gp":349,"pos":"PF"},{"name":"Aleksandar Vezenkov","gp":240,"pos":"PF"},{"name":"Shaquielle McKissic","gp":208,"pos":"SF"},{"name":"Alec Peters","gp":160,"pos":"PF"},{"name":"Ioannis Papapetrou","gp":114,"pos":"SF"},{"name":"Panagiotis Vasilopoulos","gp":93,"pos":"SF/PF"},{"name":"Matt Lojeski","gp":93,"pos":"SG/SF"},{"name":"Dimitrios Agravanis","gp":79,"pos":"PF/C"},{"name":"Livio Jean-Charles","gp":58,"pos":"PF"}],"C":[{"name":"Nikola Milutinov","gp":231,"pos":"C"},{"name":"Moustapha Fall","gp":150,"pos":"C"},{"name":"Ioannis Bourousis","gp":97,"pos":"C"},{"name":"Dimitrios Agravanis","gp":79,"pos":"PF/C"},{"name":"Sofoklis Schortsanitis","gp":71,"pos":"C"},{"name":"Bryant Dunston","gp":58,"pos":"C"},{"name":"Hassan Martin","gp":55,"pos":"C"},{"name":"Kyle Hines","gp":53,"pos":"C"},{"name":"Pero Antic","gp":53,"pos":"PF/C"},{"name":"Othello Hunter","gp":51,"pos":"C"}]},"Panathinaikos":{"G":[{"name":"Dimitris Diamantidis","gp":278,"pos":"PG/SG"},{"name":"Nick Calathes","gp":211,"pos":"PG/SG"},{"name":"Nikos Pappas","gp":130,"pos":"PG/SG"},{"name":"Jerian Grant","gp":124,"pos":"PG"},{"name":"Nikos Hatzivrettas","gp":119,"pos":"SG/SF"},{"name":"Fragiskos Alvertis","gp":115,"pos":"SG/SF/PF"},{"name":"Panagiotis Kalaitzakis","gp":113,"pos":"SG"},{"name":"Kendrick Nunn","gp":112,"pos":"SG"},{"name":"Kostas Sloukas","gp":111,"pos":"PG/SG"},{"name":"Jaka Lakovic","gp":86,"pos":"PG/SG"}],"F":[{"name":"Kostas Tsartsaris","gp":214,"pos":"PF/C"},{"name":"Mike Batiste","gp":204,"pos":"SF/PF/C"},{"name":"Dinos Mitoglou","gp":201,"pos":"PF"},{"name":"Antonis Fotsis","gp":186,"pos":"PF/C"},{"name":"James Gist","gp":181,"pos":"PF"},{"name":"Ioannis Papapetrou","gp":147,"pos":"SF"},{"name":"Nikos Hatzivrettas","gp":119,"pos":"SG/SF"},{"name":"Fragiskos Alvertis","gp":115,"pos":"SG/SF/PF"},{"name":"Juancho Hernangómez","gp":115,"pos":"PF"},{"name":"Marius Grigonis","gp":93,"pos":"SF"}],"C":[{"name":"Kostas Tsartsaris","gp":214,"pos":"PF/C"},{"name":"Mike Batiste","gp":204,"pos":"SF/PF/C"},{"name":"Antonis Fotsis","gp":186,"pos":"PF/C"},{"name":"Georgios Papagiannis","gp":153,"pos":"C"},{"name":"Ian Vouyoukas","gp":117,"pos":"C"},{"name":"Stephane Lasme","gp":74,"pos":"C"},{"name":"Mathias Lessort","gp":74,"pos":"C"},{"name":"Omer Yurtseven","gp":50,"pos":"C"},{"name":"Loukas Mavrokefalidis","gp":48,"pos":"PF/C"},{"name":"Dimos Dikoudis","gp":43,"pos":"PF/C"}]},"Maccabi Tel Aviv":{"G":[{"name":"John DiBartolomeo","gp":250,"pos":"PG/SG"},{"name":"Derrick Sharp","gp":182,"pos":"PG/SG"},{"name":"Tal Burstein","gp":178,"pos":"SG"},{"name":"Yogev Ohayon","gp":138,"pos":"PG"},{"name":"Devin Smith","gp":136,"pos":"SG/SF"},{"name":"Scottie Wilbekin","gp":124,"pos":"PG"},{"name":"Tamir Blatt","gp":102,"pos":"PG"},{"name":"Sylven Landesberg","gp":95,"pos":"SG"},{"name":"Anthony Parker","gp":90,"pos":"SG"},{"name":"Yotam Halperin","gp":87,"pos":"PG/SG"}],"F":[{"name":"Jake Cohen","gp":186,"pos":"PF"},{"name":"Guy Pnini","gp":154,"pos":"SF"},{"name":"David Bluthenthal","gp":147,"pos":"SF/PF"},{"name":"Devin Smith","gp":136,"pos":"SG/SF"},{"name":"Nikola Vujcic","gp":122,"pos":"PF/C"},{"name":"Lior Eliyahu","gp":120,"pos":"SF/PF"},{"name":"Angelo Caloiaro","gp":116,"pos":"PF"},{"name":"Alex Tyus","gp":112,"pos":"PF/C"},{"name":"Yaniv Green","gp":90,"pos":"PF/C"},{"name":"Bonzie Colson","gp":79,"pos":"PF"}],"C":[{"name":"Roman Sorkin","gp":161,"pos":"C"},{"name":"Nikola Vujcic","gp":122,"pos":"PF/C"},{"name":"Alex Tyus","gp":112,"pos":"PF/C"},{"name":"Sofoklis Schortsanitis","gp":98,"pos":"C"},{"name":"Yaniv Green","gp":90,"pos":"PF/C"},{"name":"Josh Nebo","gp":78,"pos":"C"},{"name":"Ante Zizic","gp":65,"pos":"C"},{"name":"Jasiel Rivero","gp":60,"pos":"C"},{"name":"Othello Hunter","gp":54,"pos":"C"},{"name":"Shawn James","gp":51,"pos":"PF/C"}]},"Fenerbahce":{"G":[{"name":"Melih Mahmutoglu","gp":241,"pos":"SG"},{"name":"Bobby Dixon","gp":156,"pos":"PG"},{"name":"Kostas Sloukas","gp":143,"pos":"PG/SG"},{"name":"Omer Onan","gp":141,"pos":"SG"},{"name":"Nando De Colo","gp":94,"pos":"PG/SG"},{"name":"Bogdan Bogdanović","gp":79,"pos":"SG"},{"name":"Nick Calathes","gp":77,"pos":"PG/SG"},{"name":"Scottie Wilbekin","gp":73,"pos":"PG"},{"name":"Wade Baldwin","gp":69,"pos":"PG"},{"name":"Devon Hall","gp":67,"pos":"SG"}],"F":[{"name":"Marko Gudurić","gp":232,"pos":"SF"},{"name":"Jan Vesely","gp":222,"pos":"PF/C"},{"name":"Luigi Datome","gp":159,"pos":"SF"},{"name":"Emir Preldzic","gp":152,"pos":"SF/PF"},{"name":"Dyshawn Pierre","gp":145,"pos":"SF"},{"name":"Nicolò Melli","gp":144,"pos":"PF/C"},{"name":"Tarik Biberovic","gp":144,"pos":"SF"},{"name":"Nikola Kalinic","gp":142,"pos":"SF"},{"name":"Nigel Hayes-Davis","gp":115,"pos":"PF"},{"name":"Bonzie Colson","gp":79,"pos":"PF"}],"C":[{"name":"Jan Vesely","gp":222,"pos":"PF/C"},{"name":"Oguz Savas","gp":164,"pos":"C"},{"name":"Nicolò Melli","gp":144,"pos":"PF/C"},{"name":"Ahmet Düverioğlu","gp":132,"pos":"C"},{"name":"Kerem Gonlum","gp":75,"pos":"PF/C"},{"name":"Johnathan Motley","gp":72,"pos":"PF/C"},{"name":"Semih Erden","gp":70,"pos":"C"},{"name":"Gasper Vidmar","gp":70,"pos":"C"},{"name":"Sertac Sanli","gp":68,"pos":"C"},{"name":"Devin Booker","gp":60,"pos":"C"}]},"Anadolu Efes":{"G":[{"name":"Rodrigue Beaubois","gp":249,"pos":"PG"},{"name":"Shane Larkin","gp":226,"pos":"PG"},{"name":"Dogus Balbay","gp":222,"pos":"PG"},{"name":"Vasilije Micic","gp":166,"pos":"PG"},{"name":"Krunoslav Simon","gp":152,"pos":"SG"},{"name":"Ender Arslan","gp":135,"pos":"PG"},{"name":"James Anderson","gp":134,"pos":"SG"},{"name":"Elijah Bryant","gp":132,"pos":"SG"},{"name":"Kerem Tunceri","gp":119,"pos":"PG"},{"name":"Thomas Heurtel","gp":77,"pos":"PG"}],"F":[{"name":"Kerem Gonlum","gp":134,"pos":"PF/C"},{"name":"Adrien Moerman","gp":130,"pos":"PF"},{"name":"Chris Singleton","gp":118,"pos":"SF/PF"},{"name":"Cedi Osman","gp":98,"pos":"SF"},{"name":"Ercan Osmani","gp":98,"pos":"PF/C"},{"name":"Nikola Prkacin","gp":80,"pos":"PF"},{"name":"Derrick Brown","gp":78,"pos":"SF/PF"},{"name":"Rolands Šmits","gp":74,"pos":"PF"},{"name":"Birkan Batuk","gp":73,"pos":"SG/SF"},{"name":"Antonio Granger","gp":69,"pos":"SG/SF"}],"C":[{"name":"Bryant Dunston","gp":236,"pos":"C"},{"name":"Tibor Pleiss","gp":185,"pos":"C"},{"name":"Kerem Gonlum","gp":134,"pos":"PF/C"},{"name":"Kaya Peker","gp":125,"pos":"C"},{"name":"Ermal Kuqo","gp":114,"pos":"C"},{"name":"Ercan Osmani","gp":98,"pos":"PF/C"},{"name":"Sertac Sanli","gp":64,"pos":"C"},{"name":"Brock Motum","gp":60,"pos":"C"},{"name":"Daniel Oturu","gp":60,"pos":"C"},{"name":"Vincent Poirier","gp":53,"pos":"C"}]},"Barcelona":{"G":[{"name":"Juan Carlos Navarro","gp":329,"pos":"PG/SG"},{"name":"Álex Abrines","gp":267,"pos":"SG/SF"},{"name":"Tomas Satoransky","gp":207,"pos":"SG"},{"name":"Victor Sada","gp":166,"pos":"PG"},{"name":"Kyle Kuric","gp":159,"pos":"SG/SF"},{"name":"Roger Grimau","gp":150,"pos":"SG/SF"},{"name":"Nicolas Laprovittola","gp":134,"pos":"PG"},{"name":"Adam Hanga","gp":122,"pos":"SG"},{"name":"Rokas Jokubaitis","gp":112,"pos":"PG"},{"name":"Marcelinho Huertas","gp":109,"pos":"PG/SG"}],"F":[{"name":"Álex Abrines","gp":267,"pos":"SG/SF"},{"name":"Kyle Kuric","gp":159,"pos":"SG/SF"},{"name":"Roger Grimau","gp":150,"pos":"SG/SF"},{"name":"Pierre Oriola","gp":142,"pos":"PF"},{"name":"Jan Vesely","gp":138,"pos":"PF/C"},{"name":"Fran Vazquez","gp":132,"pos":"PF/C"},{"name":"Nikola Mirotic","gp":128,"pos":"PF"},{"name":"Víctor Claver","gp":118,"pos":"SF/PF"},{"name":"Rodrigo De La Fuente","gp":117,"pos":"SF"},{"name":"Erazem Lorbek","gp":112,"pos":"PF/C"}],"C":[{"name":"Ante Tomic","gp":236,"pos":"C"},{"name":"Jan Vesely","gp":138,"pos":"PF/C"},{"name":"Fran Vazquez","gp":132,"pos":"PF/C"},{"name":"Erazem Lorbek","gp":112,"pos":"PF/C"},{"name":"Willy Hernangómez","gp":111,"pos":"PF/C"},{"name":"Brandon Davies","gp":99,"pos":"PF/C"},{"name":"Gregor Fucka","gp":77,"pos":"PF/C"},{"name":"Denis Marconato","gp":68,"pos":"C"},{"name":"Sertac Sanli","gp":68,"pos":"C"},{"name":"Boniface N'Dong","gp":62,"pos":"C"}]},"Real Madrid":{"G":[{"name":"Sergio Llull","gp":486,"pos":"PG/SG"},{"name":"Rudy Fernández","gp":329,"pos":"SG/SF"},{"name":"Jaycee Carroll","gp":274,"pos":"PG/SG"},{"name":"Facu Campazzo","gp":222,"pos":"PG"},{"name":"Sergio Rodriguez","gp":221,"pos":"PG"},{"name":"Fabien Causeur","gp":212,"pos":"PG/SG"},{"name":"Dzanan Musa","gp":114,"pos":"SG/SF"},{"name":"Louis Bullock","gp":94,"pos":"PG/SG"},{"name":"Luka Dončić","gp":80,"pos":"PG/SG/SF"},{"name":"Dontaye Draper","gp":75,"pos":"PG"}],"F":[{"name":"Felipe Reyes","gp":340,"pos":"PF"},{"name":"Rudy Fernández","gp":329,"pos":"SG/SF"},{"name":"Gabriel Alejandro Deck","gp":225,"pos":"SF"},{"name":"Jeffery Taylor","gp":201,"pos":"PF"},{"name":"Alberto Abalde","gp":197,"pos":"SF"},{"name":"Trey Thompkins","gp":164,"pos":"PF"},{"name":"Mario Hezonja","gp":159,"pos":"SF/PF"},{"name":"Anthony Randolph","gp":145,"pos":"PF"},{"name":"Gustavo Ayon","gp":141,"pos":"PF/C"},{"name":"Dzanan Musa","gp":114,"pos":"SG/SF"}],"C":[{"name":"Edy Tavares","gp":314,"pos":"C"},{"name":"Gustavo Ayon","gp":141,"pos":"PF/C"},{"name":"Vincent Poirier","gp":106,"pos":"C"},{"name":"Usman Garuba","gp":105,"pos":"PF/C"},{"name":"Marcus Slaughter","gp":87,"pos":"PF/C"},{"name":"Eli Ndiaye","gp":67,"pos":"C"},{"name":"Ioannis Bourousis","gp":57,"pos":"C"},{"name":"Mirza Begic","gp":50,"pos":"C"},{"name":"Eduardo Hernandez Sonseca","gp":40,"pos":"C"},{"name":"Ante Tomic","gp":38,"pos":"C"}]},"CSKA Moscow":{"G":[{"name":"JR Holden","gp":179,"pos":"PG/SG"},{"name":"Milos Teodosic","gp":157,"pos":"PG/SG"},{"name":"Theodoros Papaloukas","gp":154,"pos":"PG/SG"},{"name":"Nando De Colo","gp":149,"pos":"PG/SG"},{"name":"Aaron Jackson","gp":146,"pos":"PG/SG"},{"name":"Vitaly Fridzon","gp":146,"pos":"PG/SG"},{"name":"Cory Higgins","gp":129,"pos":"SG"},{"name":"Trajan Langdon","gp":116,"pos":"SG"},{"name":"Daniel Hackett","gp":109,"pos":"PG/SG"},{"name":"Zakhar Pashutin","gp":91,"pos":"SG"}],"F":[{"name":"Nikita Kurbanov","gp":278,"pos":"SF/PF"},{"name":"Andrey Vorontsevich","gp":274,"pos":"SF/PF"},{"name":"Viktor Khryapa","gp":240,"pos":"SF/PF"},{"name":"Kyle Hines","gp":218,"pos":"PF/C"},{"name":"Semen Antonov","gp":154,"pos":"SF"},{"name":"Will Clyburn","gp":126,"pos":"SF"},{"name":"Joel Bolomboy","gp":103,"pos":"PF/C"},{"name":"Ramunas Siskauskas","gp":91,"pos":"SG/SF"},{"name":"David Andersen","gp":85,"pos":"PF/C"},{"name":"Sergey Panov","gp":85,"pos":"SF"}],"C":[{"name":"Kyle Hines","gp":218,"pos":"PF/C"},{"name":"Sasha Kaun","gp":142,"pos":"C"},{"name":"Alexey Savrasenko","gp":108,"pos":"C"},{"name":"Joel Bolomboy","gp":103,"pos":"PF/C"},{"name":"David Andersen","gp":85,"pos":"PF/C"},{"name":"Johannes Voigtmann","gp":85,"pos":"C"},{"name":"Nenad Krstic","gp":80,"pos":"C"},{"name":"Matjaz Smodis","gp":71,"pos":"PF/C"},{"name":"Othello Hunter","gp":66,"pos":"C"},{"name":"Tomas Van Den Spiegel","gp":39,"pos":"C"}]},"Baskonia":{"G":[{"name":"Sergi Vidal","gp":154,"pos":"SG/SF"},{"name":"Fernando San Emeterio","gp":143,"pos":"SG/SF"},{"name":"Pablo Prigioni","gp":135,"pos":"PG"},{"name":"Markus Howard","gp":127,"pos":"PG"},{"name":"Luca Vildoza","gp":105,"pos":"PG"},{"name":"Marcelinho Huertas","gp":99,"pos":"PG/SG"},{"name":"Vanja Marinković","gp":97,"pos":"SG"},{"name":"Matt Janning","gp":90,"pos":"PG/SG"},{"name":"Fabien Causeur","gp":89,"pos":"PG/SG"},{"name":"Adam Hanga","gp":75,"pos":"SG"}],"F":[{"name":"Tadas Sedekerskis","gp":169,"pos":"PF"},{"name":"Sergi Vidal","gp":154,"pos":"SG/SF"},{"name":"Fernando San Emeterio","gp":143,"pos":"SG/SF"},{"name":"Tornike Shengelia","gp":138,"pos":"SF/PF"},{"name":"Tiago Splitter","gp":137,"pos":"PF/C"},{"name":"Luis Scola","gp":122,"pos":"PF/C"},{"name":"Mirza Teletovic","gp":120,"pos":"PF"},{"name":"Andres Nocioni","gp":104,"pos":"SF/PF"},{"name":"Rokas Giedraitis","gp":96,"pos":"SF/PF"},{"name":"Matt Costello","gp":94,"pos":"PF/C"}],"C":[{"name":"Ilimane Diop","gp":192,"pos":"C"},{"name":"Tiago Splitter","gp":137,"pos":"PF/C"},{"name":"Luis Scola","gp":122,"pos":"PF/C"},{"name":"Johannes Voigtmann","gp":100,"pos":"C"},{"name":"Matt Costello","gp":94,"pos":"PF/C"},{"name":"Maik Kotsar","gp":73,"pos":"C"},{"name":"Khalifa Diop","gp":73,"pos":"C"},{"name":"Vincent Poirier","gp":68,"pos":"C"},{"name":"Youssoupha Fall","gp":59,"pos":"C"},{"name":"Steven Enoch","gp":56,"pos":"C"}]}};
+const HIST_TEAMS=Object.keys(HISTPOOL);
+const HIST_SLOTS=['G','G','F','F','C'];
+// Guru "legends": μέτριος-δύσκολος — τυχαία από top-2 GP ανά θέση, αφαιρώντας taken
+function histGuru(teams, playerPicks){
+  // Ίδιες 5 ομάδες/θέσεις με τον παίκτη. Ανά pool: τυχαία ο 1ος Ή 2ος Ή 3ος σε GP.
+  const g=[];
+  HIST_SLOTS.forEach((slot,r)=>{
+    const team=teams[r];
+    const ranked=HISTPOOL[team][slot].slice().sort((a,b)=>b.gp-a.gp); // top-10 κατά GP
+    const rank=Math.floor(Math.random()*3); // 0,1,ή 2 → 1ος/2ος/3ος
+    const pick=ranked[Math.min(rank,ranked.length-1)];
+    g.push(pick);
+  });
+  return g;
+}
+let CHAMPS = new Set(), NAT = {}, GURUS = null, MONTH = '', LABEL = '';
+const ERAS = DB ? Object.keys(DB) : [];
+const GEXCLUDE = {
+"2005-2010":["AEK Athens","ALBA Berlin","Dynamo Moscow","Brose Bamberg","Lietuvos Rytas"],
+"2010-2015":["Valencia Basket","Lokomotiv Kuban","Khimki","UNICS","Bayern Munich","Crvena Zvezda"],
+"2015-2020":["Lokomotiv Kuban","Cedevita","Galatasaray","UNICS","Buducnost","Gran Canaria"],
+"2020-2025":["Dubai Basketball","Hapoel Tel Aviv","UNICS","Khimki"]};
+function teamsOf(era){const ex=new Set(GEXCLUDE[era]||[]);return Object.keys(DB[era]).filter(t=>!ex.has(t));}
+function nrm(s){return s.normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\b(jr|iii|iv)\b\.?/g,'').replace(/[^a-z0-9]/g,'');}
+function isChamp(n){return CHAMPS.has(nrm(n));}
+const MVP_KEYS=new Set(["dejanbodiroga", "anthonyparker", "sarunasjasikevicius", "theodorospapaloukas", "dimitrisdiamantidis", "trajanlangdon", "vassilisspanoulis", "juancarlosnavarro", "tyreserice", "andresnocioni", "nandodecolo", "ekpeudoh", "lukadoncic", "willclyburn", "vasilijemicic", "edytavares", "kostassloukas", "nigelhayesdavis", "evanfournier"].map(x=>x));
+function isMVP(n){return MVP_KEYS.has(nrm(n));}
+const CROSS_KEYS=new Set(["adamhanga", "alaindigbeu", "andrijazizic", "antetomic", "dimitriospapanikolaou", "ioannisbourousis", "ioannispapapetrou", "kostassloukas", "loukasmavrokefalidis", "lucavildoza", "maciejlampe", "mariohezonja", "mattlojeski", "nicolaslaprovittola", "nikolamirotic", "patrickfemerling", "pepesanchez", "sofoklisschortsanitis", "stratosperperoglou", "thomasheurtel", "vassilisspanoulis", "vassilistoliopoulos"]);
+function isCrosser(n){return CROSS_KEYS.has(nrm(n));}
+
+
+function natOf(n){return NAT[nrm(n)]||'INT';}
+function rnd(a){return a[Math.floor(Math.random()*a.length)];}
+const DEV=(function(){try{if(/[?&]dev=1/.test(location.search))return true;}catch(e){}
+try{if(window.parent&&window.parent!==window&&/[?&]dev=1/.test(window.parent.location.search))return true;}catch(e){}
+return false;})();
+const STD_SLOTS=['G','G','F','F','C','ANY'];
+/* Tuning δυσκολίας Guru */
+
+/* C1 σταθερά test sets */
+const FIXED_SETS=[
+[{era:"2010-2015",team:"CSKA Moscow"},{era:"2005-2010",team:"Maccabi Tel Aviv"},{era:"2010-2015",team:"Fenerbahce"},{era:"2015-2020",team:"Barcelona"},{era:"2020-2025",team:"Zalgiris"},{era:"2015-2020",team:"Panathinaikos"}],
+[{era:"2005-2010",team:"Barcelona"},{era:"2015-2020",team:"Panathinaikos"},{era:"2010-2015",team:"Partizan"},{era:"2020-2025",team:"Baskonia"},{era:"2005-2010",team:"Maccabi Tel Aviv"},{era:"2005-2010",team:"Real Madrid"}],
+[{era:"2005-2010",team:"Olympiacos"},{era:"2010-2015",team:"Maccabi Tel Aviv"},{era:"2015-2020",team:"Real Madrid"},{era:"2020-2025",team:"Zalgiris"},{era:"2020-2025",team:"Bayern Munich"},{era:"2010-2015",team:"Anadolu Efes"}],
+[{era:"2015-2020",team:"Real Madrid"},{era:"2010-2015",team:"Anadolu Efes"},{era:"2020-2025",team:"Baskonia"},{era:"2005-2010",team:"Maccabi Tel Aviv"},{era:"2020-2025",team:"Fenerbahce"},{era:"2005-2010",team:"EA7 Milano"}]];
+
+/* ===== Challenge configs ===== */
+const CH=[
+{id:0,name:'FINAL FOUR MVPs 🏅',short:'Only Final Four MVPs are legal — everyone else is a mine',spin:'era-team',slots:['★','★','★','★','★','★'],strikes:2,score:'cats',poolTop:20,
+ rules:'· Each spin: an <span>era</span> + a <span>club</span>. Pool = that squad\'s <span>top 20</span> by PIR.<br>· Only players who have won the <span>EuroLeague Final Four MVP</span> award are legal.<br>· Everyone else is a <span>mine</span>. Two mines → <span>bust</span>.<br>· Just 19 men have ever won it. <span>Know your legends.</span>',
+ mine:p=>!isMVP(p.name),mineTag:'🚫 NO MVP',mineToast:p=>'🚫 Never a F4 MVP! +1 strike',
+ valid:{minPool:8,minLegal:1,maxMine:1},guru:'mvp'},
+{id:1,name:'CLUB LEGENDS 🏛️',short:'Most-capped players of Europe\'s giants',spin:'team-hist',slots:['G','G','F','F','C'],strikes:0,score:'gp',
+ rules:'· One spin: a <span>historic club</span> (Olympiacos, Panathinaikos, Maccabi, Fener, Efes, Barça, Real, CSKA, Baskonia).<br>· Five picks by position: <span>G · G · F · F · C</span>.<br>· Each pool = the club\'s <span>10 most-capped</span> players of that position (2001&ndash;2026). Games hidden.<br>· Most total games vs <span class="guru-tag">The Guru 🧙</span> wins. No strikes.',
+ mine:p=>false,valid:{minPool:5,minLegal:5,maxMine:1},guru:'hist'},
+{id:2,name:'GOOD OFFENSE 🔥',short:'Good offense beats good defense — points only',spin:'era-team',slots:['G','G','G/F','F','C','ANY'],strikes:0,score:'ppg',poolTop:20,loosePos:true,
+ eras:ERAS.filter(e=>e!=='2001-2005'),
+ rules:'· Build a real line-up: <span>G · G · G/F · F · C</span> + one <span>free</span> pick.<br>· Each slot spins a new <span>era</span> + <span>club</span>. Pool = that squad\'s top scorers-by-PIR at the position.<br>· Only one thing counts: <span>points per game</span>.<br>· Stats are <span>hidden</span> — trust your memory.<br>· <span class="guru-tag">The Guru 🧙</span> picks from the same pools: three times the top scorer, twice the second, once the third. No mines.',
+ mine:p=>false,valid:{minPool:5,minLegal:5,maxMine:1},guru:'ppg'},
+{id:3,name:'SPANISH ARMADA 🇪🇸',short:'Españoles only — one mine and you\'re out',spin:'era-team',slots:['★','★','★','★','★','★'],strikes:1,score:'cats',poolTop:20,
+ eras:ERAS.filter(e=>e!=='2001-2005'),
+ rules:'· Each spin: an <span>era</span> + a <span>club</span>. Pool = that squad\'s <span>top 20</span> by PIR.<br>· Only <span>Spanish</span> players are legal (by national team). Everyone else is a <span>mine</span>.<br>· <span>One mine → bust.</span> No second chances.<br>· <span class="guru-tag">The Guru 🧙</span> fields the finest Armada ever — <span>brutally strong</span>. Survive the mines first.',
+ mine:p=>natOf(p.name)!=='ESP',mineTag:'🌍 NO ESP',mineToast:p=>'🌍 Not Spanish! ('+natOf(p.name)+') +1 strike',
+ valid:{minPool:8,minLegal:1,maxMine:1},guru:'esp'},
+{id:4,name:'DERBY TRAITORS 🔴🟢',short:'Only players who crossed a great rivalry are legal',spin:'era-team',slots:['★','★','★','★','★','★'],strikes:2,score:'cats',poolTop:20,
+ rules:'· Each spin: an <span>era</span> + a <span>club</span>. Pool = that squad\'s <span>top 20</span> by PIR.<br>· Legal = players who wore <span>both</span> shirts of a great rivalry: Olympiacos&harr;Panathinaikos or Real&harr;Barça.<br>· Everyone else is a <span>mine</span>. Two mines → <span>bust</span>.<br>· Just 22 traitors exist. <span>Spot them among the loyal.</span>',
+ mine:p=>!isCrosser(p.name),mineTag:'🚫 LOYAL',mineToast:p=>'🚫 Never crossed the rivalry! +1 strike',
+ valid:{minPool:8,minLegal:1,maxMine:1},guru:'cross'}
+];
+
+/* ===== state ===== */
+function skey(){return 'btg-'+MONTH;}
+function S(){try{return JSON.parse(localStorage.getItem(skey())||'{"won":[false,false,false,false,false],"losses":0,"strikesTotal":0}');}catch(e){return {won:[false,false,false,false,false],losses:0,strikesTotal:0};}}
+function setS(s){localStorage.setItem(skey(),JSON.stringify(s));paintLosses();sync(s);}
+function addLoss(){const s=S();s.losses++;s.strikesTotal=(s.strikesTotal||0)+G.strikes;setS(s);}
+function token(){try{if(window.parent&&window.parent.guruToken)return window.parent.guruToken();}catch(e){}
+  try{var t=localStorage.getItem('guru-token');if(!t){t='tk'+Date.now().toString(36)+Math.random().toString(36).slice(2,8);localStorage.setItem('guru-token',t);}return t;}catch(e){return 'tk-anon';}}
+function uname(){try{return localStorage.getItem('guru-username')||'';}catch(e){return '';}}
+function askName(force){
+  let cur=uname();
+  if(cur&&!force)return cur;
+  const n=(window.prompt('Your name for the '+(LABEL||'monthly')+' ladder:',cur||'')||'').trim().slice(0,24);
+  if(n){try{localStorage.setItem('guru-username',n);}catch(e){} sync(S()); paintName();}
+  return n||cur;
+}
+function paintName(){const el=document.getElementById('name-chip');if(el)el.textContent='PLAYING AS: '+(uname()||'Anonymous')+' ✎';}
+let syncT=null;
+function sync(s){clearTimeout(syncT);syncT=setTimeout(()=>{
+  fetch('/api/btg',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({action:'sync',token:token(),name:uname()||'Anonymous',won:s.won,losses:s.losses,strikes:s.strikesTotal||0})
+  }).catch(()=>{});},400);}
+function loadPantheon(){
+  fetch('/api/btg?token='+encodeURIComponent(token())).then(r=>r.json()).then(d=>{
+    if(!d||!d.pantheon)return;
+    const el=document.getElementById('map-pantheon');if(!el)return;
+    const s=S();
+    let mine='';
+    if(d.me){
+      const done=d.me.won.filter(Boolean).length;
+      let rank='';
+      if(done===5){const better=d.pantheon.filter(e=>e.losses<d.me.losses||(e.losses===d.me.losses&&e.strikes<d.me.strikes)).length;rank=' · rank #'+(better+1);}
+      mine='<div style="font-family:Space Mono,monospace;font-size:12px;color:var(--gold);margin:10px 0 2px;">YOU ('+(d.me.name||'Anonymous')+'): '+done+'/5 cleared · '+d.me.losses+'L · '+d.me.strikes+' strikes'+rank+'</div>';
+    }
+    el.innerHTML=mine+(d.pantheon.length?'<div class="bebas" style="color:var(--gold);font-size:18px;margin:10px 0 6px">'+LABEL+' GURUS ('+d.players+' playing)</div>'+
+      d.pantheon.slice(0,20).map((e,i)=>'<div style="font-family:Space Mono,monospace;font-size:12px;color:var(--muted)">'+(i+1)+'. <b style="color:var(--text)">'+e.name+'</b> — '+e.losses+'L · '+e.strikes+' strikes'+(e.tier==='FLAWLESS'?' ✨':'')+'</div>').join('')
+      :'<div style="font-size:12px;color:var(--muted);margin-top:12px">No '+LABEL+' Gurus yet — be the first! 🏆</div>');
+  }).catch(()=>{});
+}
+function paintLosses(){document.getElementById('losses').textContent=S().losses;}
+function resetAll(){localStorage.removeItem(skey());ATT={};showMap();paintLosses();}
+let CUR=0, G={}, ATT={};
+
+/* ===== pools ===== */
+function slotMatch(p,slot,loose){
+  if(slot==='ANY'||slot==='★')return true;
+  const cp=p.cpos||'';
+  if(!cp)return false;
+  if(slot.indexOf('/')>=0)return slot.split('/').some(s=>cp.indexOf(s)>=0); // π.χ. 'G/F'
+  return loose ? cp.indexOf(slot)>=0 : cp===slot;  // χαλαρό: 'G' πιάνει και 'G/F'
+}
+function slotPool(era,team,slot,topN,loose){
+  let arr=DB[era][team].filter(p=>slotMatch(p,slot,loose));
+  if(topN) arr=arr.slice().sort((a,b)=>(b.value||0)-(a.value||0)).slice(0,topN);
+  return arr;
+}
+function bestByPlayer(era){
+  const best={};
+  Object.keys(DB[era]).forEach(t=>DB[era][t].forEach(p=>{
+    const k=nrm(p.name);
+    if(!best[k]||p.value>best[k].value)best[k]={...p,team:t};
+  }));
+  return Object.values(best);
+}
+function serbPool(era){
+  const all=bestByPlayer(era);
+  const top=(code,n)=>all.filter(p=>natOf(p.name)===code).sort((a,b)=>b.value-a.value).slice(0,n);
+  return top('SRB',20).concat(top('HRV',5)).concat(top('SVN',5)).sort((a,b)=>a.name.localeCompare(b.name));
+}
+function drawSpin(c,slot,taken){
+  let minLegal=c.valid.minLegal||1;
+  for(let g=0;g<400;g++){
+    if(g===200&&minLegal>2)minLegal--; // ήπια χαλάρωση αν δυσκολεύει
+    const era=rnd(c.eras||ERAS),team=rnd(teamsOf(era));
+    const pool=slotPool(era,team,slot,c.poolTop,c.loosePos);
+    const legal=pool.filter(p=>!c.mine(p)&&!taken.has(nrm(p.name)));
+    const mines=pool.filter(p=>c.mine(p)).length;
+    if(pool.length>=(c.valid.minPool||5)&&legal.length>=minLegal&&mines/pool.length<=(c.valid.maxMine??1))return {era,team,legal,pool};
+  }
+  return null;
+}
+
+/* ===== Gurus ===== */
+function shrunkP3(p){return (p.m3+2)/((p.a3||0)+8);}
+function buildGuru(c){if(c.guru==='mvp')return mvpGuru();if(c.guru==='cross')return crossGuru();if(c.guru==='esp')return espGuru();if(c.guru==='ppg')return (G.guru&&G.guru.length?G.guru:[]);return GURUS['c'+c.id];}   /* κοινός Guru μήνα από btg_data.json */
+function serbGuru(era){return GURUS.c1[era];}
+// Derby Traitors Guru: ΑΔΥΝΑΜΟΣ — 6 τυχαίοι από τους crossers #11-22 κατά PIR (~60% νίκη παίκτη)
+function crossGuru(){
+  const all=[];
+  Object.keys(DB).forEach(e=>Object.keys(DB[e]).forEach(t=>DB[e][t].forEach(p=>{
+    if(isCrosser(p.name)&&p.gp>=10) all.push({...p,era:e,team:t});
+  })));
+  const best={};
+  all.forEach(p=>{const k=nrm(p.name); if(!best[k]||(p.value||0)>(best[k].value||0))best[k]=p;});
+  const ranked=Object.values(best).sort((a,b)=>(b.value||0)-(a.value||0)).slice(10,22); // #11-22
+  for(let i=ranked.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[ranked[i],ranked[j]]=[ranked[j],ranked[i]];}
+  const out=[],used=new Set();
+  for(const p of ranked){const k=nrm(p.name);if(!used.has(k)){used.add(k);out.push(p);}if(out.length===6)break;}
+  return out;
+}
+// ESP Guru: πολύ δυνατός — top-6 Ισπανοί κατά PIR όλης της βάσης (χωρίς 2001-05)
+function espGuru(){
+  const all=[];
+  Object.keys(DB).forEach(e=>{ if(e==='2001-2005')return;
+    Object.keys(DB[e]).forEach(t=>DB[e][t].forEach(p=>{
+      if(natOf(p.name)==='ESP'&&p.gp>=15) all.push({...p,era:e,team:t});
+    }));
+  });
+  const best={};
+  all.forEach(p=>{const k=nrm(p.name); if(!best[k]||(p.value||0)>(best[k].value||0))best[k]=p;});
+  // Δυνατός αλλά νικήσιμος: 6 τυχαίοι από τους Ισπανούς #5-14 κατά PIR (~34% νίκη). Όχι top-6 (αήττητος).
+  const ranked=Object.values(best).sort((a,b)=>(b.value||0)-(a.value||0)).slice(4,16);
+  for(let i=ranked.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[ranked[i],ranked[j]]=[ranked[j],ranked[i]];}
+  const out=[],used=new Set();
+  for(const p of ranked){const k=nrm(p.name);if(!used.has(k)){used.add(k);out.push(p);}if(out.length===6)break;}
+  return out;
+}
+// MVP Guru: δυνατός αλλά νικητός. Παίρνει 6 ΔΙΑΦΟΡΕΤΙΚΟΥΣ MVP από τις εγγραφές #9-35
+// κατά PIR (όχι τις κορυφαίες — αλλιώς είναι αήττητος). Tuned: ~46% νίκη παίκτη.
+function mvpGuru(){
+  const all=[];
+  Object.keys(DB).forEach(e=>Object.keys(DB[e]).forEach(t=>DB[e][t].forEach(p=>{
+    if(isMVP(p.name)&&p.gp>=15) all.push({...p,era:e,team:t});
+  })));
+  const sorted=all.sort((a,b)=>(b.value||0)-(a.value||0)).slice(8,35);
+  // ανακάτεψε και κράτα 6 ΜΟΝΑΔΙΚΟΥΣ παίκτες
+  for(let i=sorted.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[sorted[i],sorted[j]]=[sorted[j],sorted[i]];}
+  const out=[],used=new Set();
+  for(const p of sorted){const k=nrm(p.name);if(!used.has(k)){used.add(k);out.push(p);}if(out.length===6)break;}
+  return out;
+}
+
+/* ===== screens ===== */
+function show(id){['scr-map','scr-intro','scr-draft','scr-reveal','scr-bust','scr-pantheon'].forEach(s=>document.getElementById(s).classList.toggle('hidden',s!==id));}
+function showMap(){
+  const s=S();
+  const el=document.getElementById('gmap');
+  el.innerHTML=CH.map((c,i)=>{
+    const locked=i>0&&!s.won[i-1];
+    const done=s.won[i];
+    return `<div class="gcard ${locked?'locked':''} ${done?'done':''}" onclick="${locked?'':'openIntro('+i+')'}">
+      <div class="num">${i+1}</div><div><div class="ttl">${c.name}</div><div class="sub">${c.short}</div></div>
+      <div class="st">${done?'✅':(locked?'🔒':'▶️')}</div></div>`;
+  }).join('');
+  document.getElementById('att').textContent='';
+  show('scr-map');
+}
+function finishFlow(){
+  const n=(window.prompt('🧙 YOU ARE A '+(LABEL||'').toUpperCase()+' GURU!\nEnter your name for the standings:', uname()||'')||'').trim().slice(0,24);
+  if(n){try{localStorage.setItem('guru-username',n);}catch(e){}paintName();}
+  sync(S());
+  setTimeout(showPantheon,450); // δώσε στο sync μια ανάσα να προλάβει το ladder
+}
+function showPantheon(){
+  const s=S();
+  const done=s.won.every(Boolean);
+  document.getElementById('pan-title').textContent=done?(s.losses===0?('FLAWLESS '+LABEL.toUpperCase()+' GURU 🧙✨'):(LABEL.toUpperCase()+' GURU 🧙')):(LABEL.toUpperCase()+' GURUS 🏆');
+  document.getElementById('pan-sub').textContent=done?('All five challenges cleared with '+s.losses+' loss'+(s.losses===1?'':'es')+'.'):'The wall of fame — clear all 5 challenges to enter.';
+  document.getElementById('pan-share').textContent=done?('GuruLeague · Beat The Guru — '+LABEL.toUpperCase()+' GURU '+(s.losses===0?'✨ FLAWLESS':'')+' — 5/5 · '+s.losses+'L'):'';
+  document.getElementById('pan-share').style.display=done?'block':'none';
+  const box=document.getElementById('pan-standings');
+  box.innerHTML='<div style="color:var(--muted);font-size:13px;">Loading standings…</div>';
+  show('scr-pantheon');
+  fetch('/api/btg?token='+encodeURIComponent(token())).then(r=>r.json()).then(d=>{
+    if(!d||!d.pantheon){box.innerHTML='';return;}
+    const meName=(d.me&&d.me.name)||uname();
+    if(d.me&&d.me.won&&d.me.won.every(Boolean)){
+      document.getElementById('pan-title').textContent=d.me.losses===0?('FLAWLESS '+LABEL.toUpperCase()+' GURU 🧙✨'):(LABEL.toUpperCase()+' GURU 🧙');
+      document.getElementById('pan-sub').textContent='All five challenges cleared with '+d.me.losses+' loss'+(d.me.losses===1?'':'es')+'.';
+    }
+    if(!d.pantheon.length){box.innerHTML='<div style="color:var(--muted);font-size:13px;">No '+LABEL+' Gurus yet — be the first! 🏆</div>';return;}
+    let html='<div style="font-family:\'Bebas Neue\',sans-serif;letter-spacing:1px;color:var(--muted);font-size:13px;display:flex;padding:0 10px 6px;"><span style="width:34px;">#</span><span style="flex:1;text-align:left;">GURU</span><span style="width:56px;">LOSSES</span><span style="width:60px;">STRIKES</span></div>';
+    d.pantheon.forEach((e,i)=>{
+      const me=meName&&e.name===meName;
+      const medal=i===0?'👑':(i===1?'🥈':(i===2?'🥉':'#'+(i+1)));
+      html+='<div style="display:flex;align-items:center;padding:9px 10px;border-radius:10px;margin-bottom:5px;'+
+        (me?'background:rgba(245,197,24,.12);border:1px solid var(--gold);':'background:var(--surface2);border:1px solid var(--border);')+'">'+
+        '<span style="width:34px;font-size:'+(i<3?'16px':'12px')+';font-family:\'Space Mono\',monospace;color:var(--muted);">'+medal+'</span>'+
+        '<span style="flex:1;text-align:left;font-weight:600;font-size:14px;">'+e.name+(e.tier==='FLAWLESS'?' ✨':'')+(me?' <span style="color:var(--gold);font-size:11px;">(you)</span>':'')+'</span>'+
+        '<span style="width:56px;font-family:\'Space Mono\',monospace;color:var(--red);font-weight:700;">'+e.losses+'L</span>'+
+        '<span style="width:60px;font-family:\'Space Mono\',monospace;color:var(--muted);font-size:12px;">'+e.strikes+'</span></div>';
+    });
+    html+='<div style="color:var(--muted);font-size:11px;margin-top:8px;">'+d.players+' playing this month · ranked by fewest losses, then strikes</div>';
+    box.innerHTML=html;
+  }).catch(()=>{box.innerHTML='<div style="color:var(--muted);font-size:13px;">Standings unavailable offline.</div>';});
+}
+function openIntro(i){
+  CUR=i;const c=CH[i];try{window.parent.postMessage({btg:'enterChallenge'},'*');}catch(e){}
+  document.getElementById('in-title').textContent=c.name;
+  document.getElementById('in-sub').textContent='Challenge '+(i+1)+' of 5 — '+c.short;
+  document.getElementById('in-rules').innerHTML=c.rules;
+  show('scr-intro');
+}
+
+/* ===== attempt ===== */
+function startAttempt(){
+  const c=CH[CUR];
+  ATT[CUR]=(ATT[CUR]??-1)+1;
+  G={round:0,strikes:0,picks:[],taken:new Set(),guru:null};
+  if(c.score==='ppg'){ // Guru μίξη: 3×#1 + 2×#2 + 1×#3 (ανακατεμένα)
+    G.guruMix=[0,0,0,1,1,2];
+    for(let i=G.guruMix.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[G.guruMix[i],G.guruMix[j]]=[G.guruMix[j],G.guruMix[i]];}
+    G.guru=[];
+  }
+  document.getElementById('att').textContent='C'+(CUR+1)+' · ATTEMPT '+(ATT[CUR]+1);
+  document.getElementById('dr-title').textContent=c.name;
+  document.getElementById('strikebox').style.display=c.strikes?'flex':'none';
+  paintStrikes();
+  show('scr-draft');
+  if(c.spin==='era-once'){
+    document.getElementById('slot-team').style.display='none';
+    const eraList=c.eras||ERAS;
+    const era=rnd(eraList);
+    spin(eraList,'val-era','slot-era',()=>{
+      document.getElementById('val-era').textContent=era;
+      G.eraPool=serbPool(era);G.poolCtx={era,team:'Top Serbs'};
+      G.guru=serbGuru(era);
+      paintSlots();renderPoolList(G.eraPool);
+    });
+  }else if(c.spin==='team-hist'){
+    // LEGENDS: κάθε θέση = ΔΙΑΦΟΡΕΤΙΚΗ ιστορική ομάδα. 5 slots G/G/F/F/C.
+    document.getElementById('slot-era').style.display='none';
+    document.getElementById('slot-team').style.display='flex';
+    // διάλεξε 5 διαφορετικές ομάδες (μία ανά round)
+    G.histTeams=shuffleArr(HIST_TEAMS.slice()).slice(0,5);
+    G.guru=null;
+    paintSlots(); histRound();
+  }else if(c.spin==='team-exp'){
+    // Experience Matters: μία ομάδα (era+team spin), pool = top-20 σε GP, διάλεξε 6 max-GP
+    document.getElementById('slot-team').style.display='flex';
+    const era=rnd(c.eras||ERAS), team=rnd(teamsOf(era));
+    spin(ERAS,'val-era','slot-era',()=>{
+      document.getElementById('val-era').textContent=era;
+      spin(teamsOf(era),'val-team','slot-team',()=>{
+        document.getElementById('val-team').textContent=team;
+        const pool=DB[era][team].slice().sort((a,b)=>b.gp-a.gp).slice(0,20);
+        G.eraPool=pool; G.poolCtx={era,team};
+        G.guru=expGuru(pool);
+        paintSlots();renderPoolList(pool);
+      });
+    });
+  }else{
+    document.getElementById('slot-team').style.display='flex';
+    G.guru=buildGuru(c);
+    paintSlots();nextRound();
+  }
+}
+// Guru "Experience": μέτριος-δύσκολος — παίρνει GP-sorted θέσεις [0,1,3,5,7,9] (~90% του τέλειου)
+function expGuru(pool){
+  const s=pool.slice().sort((a,b)=>b.gp-a.gp);
+  const ranks=[0,1,3,5,7,9];
+  return ranks.map(i=>s[Math.min(i,s.length-1)]);
+}
+function shuffleArr(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+function histRound(){
+  if(G.round>=5){ G.guru=histGuru(G.histTeams,G.picks); reveal(); return; }
+  const slot=HIST_SLOTS[G.round];
+  const team=G.histTeams[G.round];  // ΔΙΑΦΟΡΕΤΙΚΗ ομάδα κάθε round
+  // spin animation στη νέα ομάδα, μετά δείξε το pool
+  spin(HIST_TEAMS,'val-team','slot-team',()=>{
+    document.getElementById('val-team').textContent=team;
+    // pool της θέσης, αφαιρώντας τυχόν ήδη επιλεγμένους, ΑΝΑΚΑΤΕΜΕΝΟ
+    const pool=shuffleArr(HISTPOOL[team][slot].filter(p=>!G.taken.has(nrm(p.name))).slice());
+    G.eraPool=pool; G.poolCtx={era:'2001-2026',team};
+    paintSlots(); renderPoolList(pool);
+  });
+}
+function paintSlots(){
+  const c=CH[CUR];
+  document.getElementById('slots').innerHTML=c.slots.map((s,i)=>{
+    const p=G.picks[i];
+    return `<div class="slot ${p?'filled':''} ${i===G.round?'active':''}"><div class="pos">${s}</div><div class="nm">${p?p.name:''}</div></div>`;
+  }).join('');
+}
+function paintStrikes(){const c=CH[CUR];for(let i=0;i<2;i++){const d=document.getElementById('sd'+i);d.style.display=i<c.strikes?'inline-block':'none';d.classList.toggle('hit',i<G.strikes);}}
+function spin(vals,elId,slotId,cb){
+  const el=document.getElementById(elId),slotEl=document.getElementById(slotId);
+  el.classList.add('spinning');slotEl.classList.remove('locked','slot-lock');
+  const TICKS=16;let t=0,last='';
+  (function tick(){
+    let v=rnd(vals);
+    if(vals.length>1){let g=0;while(v===last&&g++<5)v=rnd(vals);}
+    last=v;el.textContent=v;
+    if(++t>=TICKS){el.classList.remove('spinning');slotEl.classList.add('locked','slot-lock');
+      setTimeout(()=>slotEl.classList.remove('slot-lock'),460);cb();return;}
+    const p=t/TICKS;setTimeout(tick,45+200*p*p*p);
+  })();
+}
+function nextRound(){
+  const c=CH[CUR];
+  if(G.round>=6){reveal();return;}
+  paintSlots();
+  document.getElementById('pool').innerHTML='';
+  if(c.spin==='era-once'){renderPoolList(G.eraPool);return;}
+  const slot=c.slots[G.round];
+  const fixed=c.fixed&&ATT[CUR]<c.fixed.length?c.fixed[ATT[CUR]][G.round]:null;
+  const drawn=fixed||drawSpin(c,slot,G.taken);
+  spin(c.eras||ERAS,'val-era','slot-era',()=>{
+    document.getElementById('val-era').textContent=drawn.era;
+    spin(teamsOf(drawn.era),'val-team','slot-team',()=>{
+      document.getElementById('val-team').textContent=drawn.team;
+      G.poolCtx={era:drawn.era,team:drawn.team};
+      const thisPool=slotPool(drawn.era,drawn.team,slot,c.poolTop,c.loosePos);
+      if(c.score==='ppg'){ // Guru: ίδιο pool, θέση από τη μίξη (#1/#2/#3 σε PPG)
+        const byPpg=thisPool.slice().sort((a,b)=>(b.ppg||0)-(a.ppg||0));
+        const rank=G.guruMix[G.round]||0;
+        const gp=byPpg[Math.min(rank,byPpg.length-1)];
+        if(gp)G.guru.push({...gp,era:drawn.era,team:drawn.team});
+      }
+      renderPoolList(thisPool.slice().sort((a,b)=>a.name.localeCompare(b.name)));
+    });
+  });
+}
+function renderPoolList(pool){
+  G.pool=pool;
+  document.getElementById('pool').innerHTML=pool.map((p,i)=>{
+    const cls=G.taken.has(nrm(p.name))?'taken':(G.mined&&G.mined.has(nrm(p.name))?'mine':'');
+    return `<div class="pcard ${cls}" id="pc${i}" data-mine="" onclick="tap(${i})"><div class="nm">${p.name}</div><div class="meta">${p.pos||'—'} · ${p.team||G.poolCtx.team}</div></div>`;
+  }).join('');
+}
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.style.display='block';setTimeout(()=>t.style.display='none',1600);}
+function tap(i){
+  const c=CH[CUR],p=G.pool[i],card=document.getElementById('pc'+i);
+  if(card.classList.contains('mine')||card.classList.contains('taken'))return;
+  if(c.mine(p)){
+    card.classList.add('mine','shake');card.setAttribute('data-mine',c.mineTag);
+    (G.mined=G.mined||new Set()).add(nrm(p.name));
+    G.strikes++;paintStrikes();toast(c.mineToast(p));
+    if(G.strikes>=c.strikes){addLoss();document.getElementById('bust-sub').textContent=c.strikes+' mines tapped. The Guru wins this attempt.';setTimeout(()=>show('scr-bust'),700);}
+    return;
+  }
+  G.taken.add(nrm(p.name));
+  G.picks.push({...p,era:(p.era||G.poolCtx.era),team:(p.team||G.poolCtx.team)});
+  G.round++;
+  if(c.spin==='team-hist'){if(G.round>=5){G.guru=histGuru(G.histTeams,G.picks);reveal();}else{histRound();}}
+  else if(c.spin==='era-once'||c.spin==='team-exp'){if(G.round>=6){reveal();}else{paintSlots();renderPoolList(G.eraPool);}}
+  else nextRound();
+}
+
+/* ===== reveal & scoring ===== */
+function p3s(p){return p.a3>0?(100*p.m3/p.a3).toFixed(1):'0.0';}
+function fmt(p){
+  if(CH[CUR].score==='ppg')return `<div style="text-align:center;font-size:18px;color:var(--gold);font-weight:700">${p.ppg} PPG</div>`;
+  if(CH[CUR].score==='gp')return `<div style="text-align:center;font-size:18px;color:var(--gold);font-weight:700">${p.gp} GP</div>`;
+  if(CH[CUR].score==='p3')return `<span style="font-size:15px">3P% ${p3s(p)}</span><br>(${p.m3}/${p.a3} στην ${CH[CUR]?'':''}era)`;
+  return `${p.ppg} P · ${p.rpg} R · ${p.apg} A<br>${p.spg} S · ${p.bpg} B · ${p.tpg} TO<br>eFG ${p.efg}% · 3P ${p3s(p)}% (${p.m3}/${p.a3})<br>PIR ${p.value}`;
+}
+function reveal(){
+  show('scr-reveal');
+  document.getElementById('vs').classList.add('hidden');
+  const isGP=(CH[CUR].score==='gp'||CH[CUR].score==='ppg');
+  document.getElementById('rvgrid').innerHTML=G.picks.map((p,i)=>{
+    if(isGP){
+      // Legends/Experience: μπροστά όνομα+ομάδα, πίσω όνομα+GP — όλα κεντραρισμένα
+      return `<div class="flip" id="fl${i}"><div class="inner">
+        <div class="face" style="text-align:center"><div class="nm">${p.name}</div><div class="st" style="color:var(--muted)">${p.team||''}</div></div>
+        <div class="face back" style="text-align:center"><div class="nm">${p.name}</div><div class="st">${fmt(p)}</div></div></div></div>`;
+    }
+    return `<div class="flip" id="fl${i}"><div class="inner">
+    <div class="face"><div class="nm">${p.name}</div><div class="st" style="color:var(--muted)">${p.era}<br>${p.team}</div></div>
+    <div class="face back"><div class="nm">${p.name}</div><div class="st">${fmt(p)}</div></div></div></div>`;
+  }).join('');
+  G.picks.forEach((_,i)=>setTimeout(()=>document.getElementById('fl'+i).classList.add('on'),500+i*420));
+  setTimeout(vsGuru,500+6*420+600);
+}
+function sum(T,k){return +(T.reduce((s,p)=>s+(p[k]||0),0)).toFixed(1);}
+function avg(T,k){return +(T.reduce((s,p)=>s+(p[k]||0),0)/T.length).toFixed(1);}
+function teamP3(T){const m=T.reduce((s,p)=>s+p.m3,0),a=T.reduce((s,p)=>s+p.a3,0);return a>0?+(100*m/a).toFixed(1):0;}
+function vsGuru(){
+  const c=CH[CUR];let rows='',win,you=0,guru=0;
+  if(c.score==='ppg'){
+    const a=+(G.picks.reduce((s,p)=>s+(p.ppg||0),0)).toFixed(1), b=+(G.guru.reduce((s,p)=>s+(p.ppg||0),0)).toFixed(1);
+    rows=`<tr><td class="${a>=b?'catw':'catl'}">${a}</td><td style="color:var(--muted)">TOTAL PPG</td><td class="${b>a?'catw':'catl'}">${b}</td></tr>`;
+    win=a>=b; you=win?1:0; guru=win?0:1;
+  }else if(c.score==='gp'){
+    const a=G.picks.reduce((s,p)=>s+p.gp,0), b=G.guru.reduce((s,p)=>s+p.gp,0);
+    rows=`<tr><td class="${a>=b?'catw':'catl'}">${a} GP</td><td style="color:var(--muted)">TOTAL GAMES</td><td class="${b>a?'catw':'catl'}">${b} GP</td></tr>`;
+    win=a>=b; you=win?1:0; guru=win?0:1;
+  }else if(c.score==='p3'){
+    const a=teamP3(G.picks),b=teamP3(G.guru);
+    const am=G.picks.reduce((s,p)=>s+p.m3,0),aa=G.picks.reduce((s,p)=>s+p.a3,0);
+    const bm=G.guru.reduce((s,p)=>s+p.m3,0),ba=G.guru.reduce((s,p)=>s+p.a3,0);
+    rows=`<tr><td class="${a>=b?'catw':'catl'}">${a}% (${am}/${aa})</td><td style="color:var(--muted)">TEAM 3P%</td><td class="${b>a?'catw':'catl'}">${b}% (${bm}/${ba})</td></tr>`;
+    win=a!==b?a>b:(am!==bm?am>bm:true);
+    you=win?1:0;guru=win?0:1;
+  }else{
+    const CATS=[['ppg','PPG',1,sum],['rpg','RPG',1,sum],['apg','APG',1,sum],['spg','SPG',1,sum],['bpg','BPG',1,sum],['tpg','TPG',-1,sum],['efg','eFG%',1,avg]];
+    rows=CATS.map(([k,l,dir,fn])=>{
+      const a=fn(G.picks,k),b=fn(G.guru,k);
+      const w=a===b?0:((a>b?1:-1)*dir);
+      if(w>0)you++;else if(w<0)guru++;
+      return `<tr><td class="${w>0?'catw':'catl'}">${a}${k==='efg'?'%':''}</td><td style="color:var(--muted)">${l}</td><td class="${w<0?'catw':'catl'}">${b}${k==='efg'?'%':''}</td></tr>`;
+    }).join('');
+    if(you!==guru)win=you>guru;
+    else if(avg(G.picks,'efg')!==avg(G.guru,'efg'))win=avg(G.picks,'efg')>avg(G.guru,'efg');
+    else if(sum(G.picks,'value')!==sum(G.guru,'value'))win=sum(G.picks,'value')>sum(G.guru,'value');
+    else win=true;
+  }
+  document.getElementById('cats').innerHTML=`<tr><td class="bebas" style="font-size:16px;color:var(--gold)">YOU</td><td></td><td class="bebas" style="font-size:16px;color:var(--purple2)">GURU 🧙</td></tr>`+rows;
+  const r=document.getElementById('result');
+  r.textContent=win?(c.score==='p3'?'BEAT THE GURU!':'BEAT THE GURU! '+you+'-'+guru):(c.score==='p3'?'THE GURU WINS':'THE GURU WINS '+guru+'-'+you);
+  r.className='result '+(win?'win':'lose');
+  document.getElementById('vs').classList.remove('hidden');
+  document.getElementById('btn-retry').classList.toggle('hidden',win);
+  document.getElementById('btn-next').classList.toggle('hidden',!win);
+  if(win){const s=S();s.won[CUR]=true;setS(s);
+    if(s.won.every(Boolean)){document.getElementById('btn-next').setAttribute('onclick','finishFlow()');}
+  }else addLoss();
+  const s=S();
+  document.getElementById('share').classList.remove('hidden');
+  document.getElementById('share').textContent='GuruLeague · Beat The Guru — '+c.name+' — '+(win?'Beat the Guru ✔':'Lost ✘')+(c.strikes?' — strikes: '+G.strikes:'')+' — total losses: '+s.losses;
+}
+
+/* Back-button γέφυρα με το parent site */
+window.addEventListener('message',function(ev){
+  if(!ev.data||ev.data.btg!=='back')return;
+  var onMap=document.getElementById('scr-map')&&!document.getElementById('scr-map').classList.contains('hidden');
+  if(!onMap){showMap();}
+  else{try{window.parent.postMessage({btg:'exit'},'*');}catch(e){}}
+});
+(function boot(){
+  if(!DB){document.getElementById('scr-map').innerHTML='<div class="theme-sub" style="font-size:15px">⚠️ Beat The Guru needs the main site to run (it reads the game database from it).<br><br>If you opened this file directly from your computer (file://), that is expected — browsers isolate local files.<br>Test it on the site / Vercel preview, or use <b>btg_local_test.html</b> for double-click testing.</div>';return;}
+  fetch('btg_data.json').then(r=>r.json()).then(d=>{
+    CHAMPS=new Set(d.champs);NAT=d.nat;GURUS=d.gurus;MONTH=d.month;LABEL=d.label||d.month;
+    document.getElementById('mon-label').textContent=LABEL.toUpperCase()+' · 5 CHALLENGES';
+    paintLosses();paintName();if(DEV)document.getElementById('dev-tools').classList.remove('hidden');showMap();
+  }).catch(()=>{document.getElementById('scr-map').innerHTML='<div class="theme-sub">Failed to load challenge data (btg_data.json). Try refreshing.</div>';});
+})();
+</script>
+</body>
+</html>
